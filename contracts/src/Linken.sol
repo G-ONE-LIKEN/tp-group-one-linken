@@ -41,10 +41,7 @@ contract Linken is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGuard
     // Constructor
     // =========================================================
 
-    constructor(address initialOwner)
-        ERC20("LINKEN", "LKN")
-        Ownable(initialOwner)
-    {
+    constructor(address initialOwner) ERC20("LINKEN", "LKN") Ownable(initialOwner) {
         // CEI: no hay checks externos; efecto directo sobre el estado.
         _mint(initialOwner, INITIAL_SUPPLY);
     }
@@ -57,12 +54,7 @@ contract Linken is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGuard
      * @notice Mintea `amount` tokens a `to`.
      * @dev ReentrancyGuard + CEI: checks → effects (_mint) → no interactions externas.
      */
-    function mint(address to, uint256 amount)
-        external
-        onlyOwner
-        nonReentrant
-        whenNotPaused
-    {
+    function mint(address to, uint256 amount) external onlyOwner nonReentrant whenNotPaused {
         // Checks
         require(to != address(0), "LKN: mint to zero address");
         require(amount > 0, "LKN: amount must be > 0");
@@ -98,12 +90,7 @@ contract Linken is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGuard
      * @dev ERC20Burnable.burn ya implementa CEI internamente.
      *      ReentrancyGuard agrega una capa extra.
      */
-    function burn(uint256 amount)
-        public
-        override
-        nonReentrant
-        whenNotPaused
-    {
+    function burn(uint256 amount) public override nonReentrant whenNotPaused {
         // Checks
         require(amount > 0, "LKN: amount must be > 0");
 
@@ -116,12 +103,7 @@ contract Linken is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGuard
     /**
      * @notice Quema `amount` tokens de `account` con allowance.
      */
-    function burnFrom(address account, uint256 amount)
-        public
-        override
-        nonReentrant
-        whenNotPaused
-    {
+    function burnFrom(address account, uint256 amount) public override nonReentrant whenNotPaused {
         require(amount > 0, "LKN: amount must be > 0");
         super.burnFrom(account, amount);
         emit Burned(account, amount);
@@ -131,11 +113,7 @@ contract Linken is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ReentrancyGuard
     // Overrides requeridos por Solidity (herencia múltiple)
     // =========================================================
 
-    function _update(address from, address to, uint256 value)
-        internal
-        virtual
-        override(ERC20, ERC20Pausable)
-    {
+    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) {
         super._update(from, to, value);
     }
 }

@@ -16,10 +16,7 @@ contract ReentrantLinken is Linken {
 
     constructor(address initialOwner) Linken(initialOwner) {}
 
-    function _update(address from, address to, uint256 value)
-        internal
-        override
-    {
+    function _update(address from, address to, uint256 value) internal override {
         super._update(from, to, value);
 
         // Solo intenta reentrar una vez para evitar recursión infinita
@@ -44,10 +41,10 @@ contract LinkenTest is Test {
 
     address public owner = makeAddr("owner");
     address public alice = makeAddr("alice");
-    address public bob   = makeAddr("bob");
+    address public bob = makeAddr("bob");
 
     uint256 constant INITIAL = 10_000 * 1e18;
-    uint256 constant MAX     = 1_000_000 * 1e18;
+    uint256 constant MAX = 1_000_000 * 1e18;
 
     // --------------------------------------------------------
     // Setup
@@ -64,11 +61,11 @@ contract LinkenTest is Test {
 
     function test_InitialSupplyGoesToOwner() public view {
         assertEq(token.balanceOf(owner), INITIAL);
-        assertEq(token.totalSupply(),    INITIAL);
+        assertEq(token.totalSupply(), INITIAL);
     }
 
     function test_NameAndSymbol() public view {
-        assertEq(token.name(),   "LINKEN");
+        assertEq(token.name(), "LINKEN");
         assertEq(token.symbol(), "LKN");
     }
 
