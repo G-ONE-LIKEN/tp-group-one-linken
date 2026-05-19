@@ -18,3 +18,7 @@ via_ir = true
 [invariant]
 runs   = 256
 depth  = 15
+
+# Formatter — excluir dependencias
+[fmt]
+exclude = ["lib/**"]

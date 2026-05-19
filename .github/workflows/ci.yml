@@ -21,15 +21,20 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
 
       - name: Show Forge version
         run: forge --version
 
       - name: Run Forge fmt
-        run: forge fmt --check
+        run: forge fmt --check src test script
+        working-directory: contracts
 
       - name: Run Forge build
         run: forge build --sizes
+        working-directory: contracts
 
       - name: Run Forge tests
         run: forge test -vvv
+        working-directory: contracts
