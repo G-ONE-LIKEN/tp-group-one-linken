@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 // forge-lint: disable(erc20-unchecked-transfer)
 
 import {Test, console} from "forge-std/Test.sol";
-import {Linken} from "../src/Linken.sol";
+import {Linken} from "../../src/legacy/Linken.sol";
 
 // ============================================================
 // Contrato auxiliar para test de reentrancy

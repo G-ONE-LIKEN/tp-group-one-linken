@@ -19,6 +19,10 @@ via_ir = true
 runs   = 256
 depth  = 15
 
+[profile.default]
+test = "test"
+no_match_path = "test/legacy/**"
+
 # Formatter — excluir dependencias
-[fmt]
-exclude = ["lib/**"]
+#[fmt]
+#exclude = ["lib/**"]
