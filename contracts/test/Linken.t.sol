@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+// forge-lint: disable(erc20-unchecked-transfer)
+
 import {Test, console} from "forge-std/Test.sol";
 import {Linken} from "../src/Linken.sol";
 
@@ -8,7 +10,7 @@ import {Linken} from "../src/Linken.sol";
 // Contrato auxiliar para test de reentrancy
 //
 // Subclasea Linken y sobreescribe _update para intentar llamar
-// burn() de nuevo mientras ya está ejecutando burn().
+// burn() de nuevo mientras ya esta ejecutando burn().
 // ReentrancyGuard debe revertir la segunda entrada.
 // ============================================================
 contract ReentrantLinken is Linken {
@@ -19,7 +21,7 @@ contract ReentrantLinken is Linken {
     function _update(address from, address to, uint256 value) internal override {
         super._update(from, to, value);
 
-        // Solo intenta reentrar una vez para evitar recursión infinita
+        // Solo intenta reentrar una vez para evitar recursion infinita
         if (_attacking) {
             _attacking = false;
             // Intenta llamar burn() desde adentro de _update (reentrada)
@@ -252,7 +254,7 @@ contract LinkenTest is Test {
     // --------------------------------------------------------
 
     function test_ReentrancyOnBurnFails() public {
-        // Desplegamos una versión maliciosa del contrato que intenta
+        // Desplegamos una version maliciosa del contrato que intenta
         // reentrar burn() desde dentro del hook _update.
         vm.prank(owner);
         ReentrantLinken malicious = new ReentrantLinken(owner);
@@ -272,7 +274,7 @@ contract LinkenTest is Test {
     // --------------------------------------------------------
 
     function testFuzz_MintAnyValidAmount(uint256 amount) public {
-        // Acotamos al espacio válido
+        // Acotamos al espacio valido
         amount = bound(amount, 1, MAX - INITIAL);
 
         vm.prank(owner);
