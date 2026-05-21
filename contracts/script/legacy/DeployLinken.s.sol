@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {Linken} from "../src/Linken.sol";
+import {Linken} from "../../src/legacy/Linken.sol";
 
 contract DeployLinken is Script {
     function run() external {

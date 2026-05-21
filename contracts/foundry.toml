@@ -5,7 +5,6 @@ libs          = ["lib"]
 test          = "test"
 script        = "script"
 solc          = "0.8.24"
-test          = "test"
 no_match_path = "test/legacy/**"
 
 # Fuzz config
