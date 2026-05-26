@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+// contracts/src/LinkenToken.sol
+
 /**
  * @title Linken (LKN)
  * @notice ERC-20 token para plataforma de tokenización de energías renovables.

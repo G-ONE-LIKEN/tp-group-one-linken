@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+// contracts/test/ProjectRegistry.t.sol
+
 import {Test} from "forge-std/Test.sol";
 import {ProjectRegistry} from "../src/ProjectRegistry.sol";
 
@@ -104,5 +106,77 @@ contract ProjectRegistryTest is Test {
         }
         vm.stopPrank();
         assertEq(registry.projectCount(), count);
+    }
+
+    function test_ConstructorZeroAdminReverts() public {
+        vm.expectRevert("PR: zero admin");
+        new ProjectRegistry(address(0));
+    }
+
+    function test_RegisterEmptyNameReverts() public {
+        vm.prank(creator);
+        vm.expectRevert("PR: empty name");
+
+        registry.registerProject("", "Desc", creator, EARLY, STD);
+    }
+
+    function test_RegisterZeroOwnerReverts() public {
+        vm.prank(creator);
+
+        vm.expectRevert("PR: zero owner");
+
+        registry.registerProject("Solar", "Desc", address(0), EARLY, STD);
+    }
+
+    function test_RegisterZeroEarlyPriceReverts() public {
+        vm.prank(creator);
+
+        vm.expectRevert("PR: zero early bird price");
+
+        registry.registerProject("Solar", "Desc", creator, 0, STD);
+    }
+
+    function test_RegisterZeroStandardPriceReverts() public {
+        vm.prank(creator);
+
+        vm.expectRevert("PR: zero standard price");
+
+        registry.registerProject("Solar", "Desc", creator, EARLY, 0);
+    }
+
+    function test_GetProjectNotFoundReverts() public {
+        vm.expectRevert("PR: not found");
+        registry.getProject(999);
+    }
+
+    function test_CurrentPriceNotFoundReverts() public {
+        vm.expectRevert("PR: not found");
+        registry.currentPrice(999);
+    }
+
+    function test_SetStageNotFoundReverts() public {
+        vm.expectRevert("PR: not found");
+        registry.setStage(999, ProjectRegistry.Stage.ACTIVE);
+    }
+
+    function test_AdminCanPauseAndUnpause() public {
+        vm.startPrank(platform);
+
+        registry.pause();
+        registry.unpause();
+
+        vm.stopPrank();
+    }
+
+    function test_PausedBlocksRegisterProject() public {
+        vm.startPrank(platform);
+        registry.pause();
+        vm.stopPrank();
+
+        vm.prank(creator);
+
+        vm.expectRevert();
+
+        registry.registerProject("Solar", "Desc", creator, EARLY, STD);
     }
 }

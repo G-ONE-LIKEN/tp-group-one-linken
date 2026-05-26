@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 // forge-lint: disable(erc20-unchecked-transfer)
+// contracts/test/LinkenToken.t.sol
 
 import {Test} from "forge-std/Test.sol";
 import {LinkenToken} from "../src/LinkenToken.sol";
@@ -117,5 +118,48 @@ contract LinkenTokenTest is Test {
         token.burn(amount);
 
         assertEq(token.balanceOf(alice), supply - amount);
+    }
+
+    function test_ConstructorZeroAdminReverts() public {
+        vm.expectRevert("LKN: zero admin");
+        new LinkenToken(address(0));
+    }
+
+    function test_BurnFromWithAllowance() public {
+        vm.startPrank(platform);
+        token.mint(alice, 1000e18);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        token.approve(bob, 500e18);
+
+        vm.prank(bob);
+        token.burnFrom(alice, 500e18);
+
+        assertEq(token.balanceOf(alice), 500e18);
+    }
+
+    function test_BurnFromZeroReverts() public {
+        vm.expectRevert("LKN: amount must be > 0");
+        token.burnFrom(alice, 0);
+    }
+
+    function test_SetDistributor() public {
+        vm.prank(platform);
+        token.setDistributor(address(123));
+
+        assertEq(address(token.dividendDistributor()), address(123));
+    }
+
+    function test_SetDistributorZeroReverts() public {
+        vm.prank(platform);
+        vm.expectRevert("LKN: zero distributor");
+        token.setDistributor(address(0));
+    }
+
+    function test_NonAdminCannotSetDistributor() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        token.setDistributor(address(123));
     }
 }

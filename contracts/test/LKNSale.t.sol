@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+// contracts/test/LKNSale.t.sol
+
 import {Test} from "forge-std/Test.sol";
 import {LKNSale} from "../src/LKNSale.sol";
 import {LinkenToken} from "../src/LinkenToken.sol";
@@ -142,5 +144,40 @@ contract LKNSaleTest is Test {
 
         uint256 expected = (usdcAmount * 1e18) / EARLY;
         assertEq(lkn.balanceOf(alice), expected);
+    }
+
+    function test_ConstructorZeroLKNReverts() public {
+        vm.expectRevert("SALE: zero lkn");
+
+        new LKNSale(address(0), address(usdc), address(registry), treasury, platform);
+    }
+
+    function test_LKNAmountTooSmallReverts() public {
+        vm.startPrank(platform);
+
+        uint256 expensiveProject = registry.registerProject("Expensive", "Desc", platform, 1e30, 1e30 + 1);
+
+        vm.stopPrank();
+
+        vm.prank(alice);
+
+        vm.expectRevert("SALE: lkn amount too small");
+
+        sale.buyLKN(expensiveProject, 1);
+    }
+
+    function test_UnpauseRestoresSale() public {
+        vm.startPrank(platform);
+
+        sale.pause();
+        sale.unpause();
+
+        vm.stopPrank();
+
+        vm.prank(alice);
+
+        sale.buyLKN(projectId, 10 * 1e6);
+
+        assertGt(lkn.balanceOf(alice), 0);
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 // forge-lint: disable(erc20-unchecked-transfer)
+// contracts/test/DividendDistributor.t.sol
 
 import {Test} from "forge-std/Test.sol";
 import {DividendDistributor} from "../src/DividendDistributor.sol";
@@ -265,5 +266,38 @@ contract DividendDistributorTest is Test {
         // Intento de llamada externa maliciosa
         vm.expectRevert("DD: not project token");
         distributor.onTokenTransfer(alice, bob, 100e18);
+    }
+
+    function test_UnpauseRestoresClaim() public {
+        vm.startPrank(platform);
+
+        token.transfer(alice, SUPPLY);
+        distributor.depositDividends(1000 * 1e6);
+
+        distributor.pause();
+        distributor.unpause();
+
+        vm.stopPrank();
+
+        vm.prank(alice);
+
+        distributor.claimDividends();
+
+        assertGt(usdc.balanceOf(alice), 0);
+    }
+
+    function test_TotalWithdrawnUpdated() public {
+        vm.startPrank(platform);
+
+        token.transfer(alice, SUPPLY);
+        distributor.depositDividends(1000 * 1e6);
+
+        vm.stopPrank();
+
+        vm.prank(alice);
+
+        distributor.claimDividends();
+
+        assertApproxEqAbs(distributor.totalWithdrawn(), 1000 * 1e6, 1);
     }
 }

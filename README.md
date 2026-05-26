@@ -1,59 +1,178 @@
-# Linken (LKN) — Token de Energías Renovables
+# Linken (LKN) — Plataforma de Tokenización de Proyectos Energéticos
 
-Monorepo con contrato ERC-20 auditado + frontend mínimo para interactuar desde el navegador.
+Monorepo con smart contracts en Solidity (Foundry) + frontend web para interactuar con la plataforma desde el navegador.
 
----
+El proyecto evolucionó desde un único token ERC-20 hacia una arquitectura modular compuesta por:
 
-## Índice
-
-1. [Estructura del monorepo](#estructura-del-monorepo)
-2. [Decisiones de arquitectura](#decisiones-de-arquitectura)
-3. [Prerequisitos](#prerequisitos)
-4. [Setup — Contratos](#setup--contratos)
-5. [Tests y coverage](#tests-y-coverage)
-6. [Análisis estático con Slither](#análisis-estático-con-slither)
-7. [Setup — Frontend](#setup--frontend)
-    - [Mas info](#mas-info)
-8. [Variables de entorno](#variables-de-entorno)
-9. [Checklist de seguridad](#checklist-de-seguridad)
-10. [Deploy oficial (leer antes de ejecutar)](#deploy-oficial-leer-antes-de-ejecutar)
+- `LinkenToken` (LKN)
+- `ProjectRegistry`
+- `DividendDistributor`
+- `LKNSale`
+- Frontend Next.js
 
 ---
 
-## Estructura del monorepo
+# Índice
 
-```
+1. Arquitectura general
+2. Estructura del monorepo
+3. Smart Contracts
+4. Flujo del sistema
+5. Prerrequisitos
+6. Setup — Contratos
+7. Tests
+8. Coverage
+9. Slither
+10. Setup — Frontend
+11. Variables de entorno
+12. Deploy
+13. Seguridad
+14. Roadmap
+
+---
+
+# Arquitectura general
+
+Linken es una plataforma de tokenización de proyectos energéticos renovables.
+
+La arquitectura actual separa responsabilidades entre múltiples contratos:
+
+| Contrato | Responsabilidad |
+|---|---|
+| `LinkenToken.sol` | Token principal LKN |
+| `ProjectRegistry.sol` | Registro y administración de proyectos |
+| `DividendDistributor.sol` | Distribución de dividendos a holders |
+| `LKNSale.sol` | Venta primaria de tokens |
+
+La idea principal es representar proyectos energéticos mediante activos tokenizados y permitir:
+
+- Registro de proyectos
+- Emisión de tokens
+- Venta de tokens
+- Distribución de dividendos
+- Integración con frontend Web3
+
+---
+
+# Estructura del monorepo
+
+```text
 linken/
-├── contracts/          # Foundry: contrato, tests, scripts
+├── contracts/
 │   ├── src/
-│   │   └── Linken.sol
+│   │   ├── DividendDistributor.sol
+│   │   ├── LinkenToken.sol
+│   │   ├── LKNSale.sol
+│   │   ├── ProjectRegistry.sol
+│   │   └── interfaces/
+│   │
 │   ├── test/
-│   │   └── Linken.t.sol
+│   │   ├── DividendDistributor.t.sol
+│   │   ├── LinkenToken.t.sol
+│   │   ├── LKNSale.t.sol
+│   │   └── ProjectRegistry.t.sol
+│   │
 │   ├── script/
-│   │   └── DeployLinken.s.sol
 │   ├── foundry.toml
-│   └── remappings.txt
-├── frontend/           # Next.js + RainbowKit + wagmi v2 + viem
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   └── lib/
-│   └── package.json
-├── .gitignore
+│   ├── remappings.txt
+│   └── lib/
+│
+├── frontend/
+├── docs/
+├── legacy-contracts/
 └── README.md
 ```
 
 ---
 
-## Decisiones de arquitectura
+# Smart Contracts
 
-Las decisiones de diseño están documentadas como ADRs en [`docs/`](./docs/).
+## LinkenToken.sol
+
+Token ERC-20 principal del ecosistema.
+
+Características:
+
+- Basado en OpenZeppelin
+- Mint controlado
+- Supply configurable
+- Integración con contratos de venta
+- Compatible con frontend Web3
 
 ---
 
-## Prerequisitos
+## ProjectRegistry.sol
 
-### Node.js (requerido para el frontend)
+Registro central de proyectos energéticos.
+
+Responsabilidades:
+
+- Crear proyectos
+- Asociar metadata
+- Registrar contratos relacionados
+- Mantener estado de proyectos
+
+Ejemplos de proyectos:
+
+- Campo solar
+- Parque eólico
+- Planta biomasa
+
+---
+
+## DividendDistributor.sol
+
+Permite distribuir dividendos a holders de tokens.
+
+Características:
+
+- Distribución proporcional
+- Compatible con ERC-20
+- Soporte para stablecoins
+- Gestión de depósitos y reclamos
+
+---
+
+## LKNSale.sol
+
+Contrato de venta primaria.
+
+Responsabilidades:
+
+- Venta de tokens
+- Gestión de precios
+- Control de supply
+- Recepción de fondos
+
+---
+
+# Flujo del sistema
+
+```text
+Usuario
+   ↓
+Frontend Next.js
+   ↓
+Smart Contracts
+   ├── LinkenToken
+   ├── ProjectRegistry
+   ├── LKNSale
+   └── DividendDistributor
+```
+
+Flujo típico:
+
+1. Se registra un proyecto
+2. Se habilita una venta de tokens
+3. Usuarios compran tokens
+4. El proyecto genera rendimiento
+5. DividendDistributor distribuye ganancias
+
+---
+
+# Prerrequisitos
+
+## Node.js
 
 ```bash
 # Arch Linux
@@ -64,23 +183,31 @@ sudo apt install nodejs npm
 
 # macOS
 brew install node
+```
 
-# Verificar
-node --version   # >= 18
+Verificar:
+
+```bash
+node --version
 npm --version
 ```
 
-### Foundry (requerido para los contratos)
+---
+
+## Foundry
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
-source ~/.bashrc   # o ~/.zshrc en Arch/zsh
+source ~/.bashrc
 foundryup
+
 forge --version
 cast --version
 ```
 
-### Slither (opcional, para análisis estático)
+---
+
+## Slither (opcional)
 
 ```bash
 pip install slither-analyzer --break-system-packages
@@ -89,228 +216,193 @@ slither --version
 
 ---
 
-## Setup — Contratos
+# Setup — Contratos
 
 ```bash
 cd contracts
 
-# 1. Instalar dependencias
-forge install OpenZeppelin/openzeppelin-contracts
-forge install foundry-rs/forge-std
+# Instalar dependencias
+forge install
 
-# 2. Variables de entorno
-cp .env.example .env
-# Editar .env con tu SEPOLIA_RPC_URL y ETHERSCAN_API_KEY
-
-# 3. Compilar
+# Compilar
 forge build
 
-# 4. Correr tests
+# Ejecutar tests
 forge test -vv
 ```
 
 ---
 
-## Tests y coverage
+# Tests
+
+Tests disponibles:
+
+| Archivo |
+|---|
+| `DividendDistributor.t.sol` |
+| `LinkenToken.t.sol` |
+| `LKNSale.t.sol` |
+| `ProjectRegistry.t.sol` |
+
+Ejecutar todos:
 
 ```bash
-cd contracts
-
-# Todos los tests con output detallado
 forge test -vv
+```
 
-# Solo fuzz tests
-forge test --match-test testFuzz -vv
+Ejecutar test específico:
 
-# Coverage (apuntar a >= 95%)
+```bash
+forge test --match-contract LinkenTokenTest -vv
+```
+
+---
+
+# Coverage
+
+```bash
 forge coverage
+```
 
-# Coverage con reporte HTML
+Reporte HTML:
+
+```bash
 forge coverage --report lcov
 genhtml lcov.info --output-dir coverage-report
-# Abrir coverage-report/index.html en el navegador
 ```
-
-### Tests incluidos
-
-| Test | Tipo | Qué verifica |
-|---|---|---|
-| `test_InitialSupplyGoesToOwner` | Unit | Supply inicial al deployer |
-| `test_NameAndSymbol` | Unit | Nombre y símbolo correctos |
-| `test_OwnerCanMint` | Unit | Owner puede mintear |
-| `test_NonOwnerCannotMint` | Unit | No-owner no puede mintear |
-| `test_MintToZeroAddressReverts` | Unit | Revierte en address cero |
-| `test_MintZeroAmountReverts` | Unit | Revierte si amount = 0 |
-| `test_MintBeyondCapReverts` | Unit | No supera MAX_SUPPLY |
-| `test_MintUpToCapSucceeds` | Unit | Puede llegar exactamente al cap |
-| `test_HolderCanBurnOwnTokens` | Unit | Cualquier holder puede quemar |
-| `test_BurnZeroReverts` | Unit | Revierte si burn(0) |
-| `test_BurnFromWithAllowance` | Unit | burnFrom con allowance |
-| `test_BurnFromWithoutAllowanceReverts` | Unit | burnFrom sin allowance revierte |
-| `test_OwnerCanPauseAndUnpause` | Unit | Circuit-breaker funciona |
-| `test_NonOwnerCannotPause` | Unit | No-owner no puede pausar |
-| `test_TransferBlockedWhenPaused` | Unit | Transfer bloqueada si paused |
-| `test_MintBlockedWhenPaused` | Unit | Mint bloqueado si paused |
-| `test_BurnBlockedWhenPaused` | Unit | Burn bloqueado si paused |
-| `test_MintEmitsMintedEvent` | Unit | Evento Minted emitido |
-| `test_BurnEmitsBurnedEvent` | Unit | Evento Burned emitido |
-| `test_ReentrancyOnBurnFails` | Unit | Ataque de reentrancy falla |
-| `testFuzz_MintAnyValidAmount` | Fuzz | Mint con cualquier monto válido |
-| `testFuzz_BurnAnyValidAmount` | Fuzz | Burn con cualquier monto válido |
-| `testFuzz_TransferAnyValidAmount` | Fuzz | Transfer con cualquier monto |
-| `testFuzz_MintNeverExceedsCap` | Fuzz | Cap nunca superado |
-| `invariant_TotalSupplyNeverExceedsCap` | Invariant | Supply <= MAX en todo momento |
 
 ---
 
-## Análisis estático con Slither
+# Slither
+
+Análisis estático:
 
 ```bash
-cd contracts
-
-# Instalar si no está instalado
-pip install slither-analyzer --break-system-packages
-
-# Correr análisis
-slither src/Linken.sol --config-file slither.config.json
-
-# Generar reporte
-slither src/Linken.sol --json slither-report.json
+slither src/
 ```
 
-`slither.config.json` sugerido:
+Ejemplo:
 
-```json
-{
-  "filter_paths": "lib/",
-  "solc_remaps": [
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
-  ]
-}
+```bash
+slither src/LinkenToken.sol
 ```
-
-Hallazgos conocidos y su resolución:
-- **erc20-unchecked-transfer**: resuelto usando `SafeERC20` o verificando que OZ ya lo maneja internamente
-- **reentrancy**: mitigado con `ReentrancyGuard` + patrón CEI
 
 ---
 
-## Setup — Frontend
+# Setup — Frontend
 
 ```bash
 cd frontend
 
-# 1. Instalar dependencias
 npm install
-
-# 2. Variables de entorno
-cp .env.example .env.local
-# Completar NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID y NEXT_PUBLIC_LINKEN_ADDRESS
-
-# 3. Correr en desarrollo
 npm run dev
-# Abrir http://localhost:3000
 ```
-### Mas info
 
-Para mas información sobre el front-end hacer click [`ACA`](./frontend/FRONTEND.md)
+Abrir:
 
-### Obtener WalletConnect Project ID
-
-1. Ir a https://cloud.walletconnect.com
-2. Crear cuenta gratuita
-3. Crear nuevo proyecto
-4. Copiar el Project ID al `.env.local`
+```text
+http://localhost:3000
+```
 
 ---
 
-## Variables de entorno
+# Variables de entorno
 
-### contracts/.env
+## contracts/.env
 
 ```bash
-SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-ETHERSCAN_API_KEY=<tu_api_key>    # https://etherscan.io/myapikey
-DEPLOYER_ADDRESS=<tu_address_0x>
-
-# Después del deploy:
-LINKEN_ADDRESS=
+SEPOLIA_RPC_URL=
+ETHERSCAN_API_KEY=
+PRIVATE_KEY=
 ```
 
-### frontend/.env.local
+---
+
+## frontend/.env.local
 
 ```bash
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<tu_project_id>
-NEXT_PUBLIC_LINKEN_ADDRESS=<address_del_contrato>
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+NEXT_PUBLIC_LKN_ADDRESS=
+NEXT_PUBLIC_REGISTRY_ADDRESS=
 ```
 
-> **IMPORTANTE**: `.env` y `.env.local` están en `.gitignore`.
-> Nunca commitear claves privadas, API keys ni seeds.
-> Verificar con `git status` antes de cada push.
-
 ---
 
-## Checklist de seguridad
+# Deploy
 
-| Item | Estado | Detalle |
-|---|---|---|
-| ReentrancyGuard | ✅ | `mint`, `burn`, `burnFrom` protegidos |
-| Patrón CEI | ✅ | Checks → Effects → Interactions en todas las funciones de escritura |
-| Overflow | ✅ | Solidity 0.8.24, sin `unchecked` salvo donde se justifica |
-| Access control | ✅ | `onlyOwner` en `mint`, `pause`, `unpause` |
-| Pausable | ✅ | Circuit-breaker en transferencias, mint y burn |
-| Cap de supply | ✅ | `MAX_SUPPLY` = 1.000.000 LKN |
-| Sin loops | ✅ | No hay iteraciones sobre arrays ni envío de ETH en loops |
-| Sin ETH | ✅ | El contrato no recibe ni envía ETH |
-| Front-running | ✅ | No aplica: mint es solo-owner, burn no tiene incentivo de MEV |
-| .env gitignored | ✅ | `.env`, `.env.local` en `.gitignore` |
-| Tests ≥ 95% | ✅ | 25 tests: unit + fuzz + invariant |
+## Local (Anvil)
 
----
+```bash
+anvil
+```
 
-## Deploy oficial (leer antes de ejecutar)
-
-> ⚠️ **En blockchain no hay rollbacks. El contrato queda en la red para siempre.**
-> Completar todo el checklist antes de ejecutar el deploy.
-
-### Pasos previos obligatorios
-
-- [ ] `forge test -vv` — todos los tests en verde
-- [ ] `forge coverage` — coverage ≥ 95%
-- [ ] Slither corrido y hallazgos revisados
-- [ ] `.env` completo con RPC URL y API key de Etherscan
-- [ ] Wallet con SepoliaETH para gas (faucet: https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
-- [ ] Revisión en grupo del contrato final
-
-### Comandos de deploy
+En otra terminal:
 
 ```bash
 cd contracts
-source .env
-
-# 1. Deploy
-forge script script/DeployLinken.s.sol \
-  --rpc-url $SEPOLIA_RPC_URL \
-  --account dev \
+forge script script/DeployAll.s.sol \
+  --rpc-url http://127.0.0.1:8545 \
   --broadcast
-
-# 2. Guardar la address que imprime y agregarla al .env
-# LINKEN_ADDRESS=0x...
-
-# 3. Verificar en Etherscan
-forge verify-contract $LINKEN_ADDRESS src/Linken.sol:Linken \
-  --rpc-url $SEPOLIA_RPC_URL \
-  --etherscan-api-key $ETHERSCAN_API_KEY \
-  --chain sepolia
-
-# 4. Actualizar frontend/.env.local con la nueva address
-# 5. npm run build en frontend para verificar que compila
 ```
 
 ---
 
-## Changelog
+## Sepolia
 
-| Versión | Fecha | Cambio |
-|---|---|---|
-| 0.1.0 | 2025-05 | Setup inicial: contrato + tests + frontend |
+```bash
+forge script script/DeployAll.s.sol \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast
+```
+
+---
+
+# Seguridad
+
+Checklist general:
+
+- Reentrancy protection
+- Uso de OpenZeppelin
+- Solidity 0.8.x
+- Tests unitarios
+- Fuzz tests
+- Coverage
+- Slither
+- Control de permisos
+- Validación de inputs
+
+---
+
+# Desarrollo recomendado
+
+Antes de cada push:
+
+```bash
+forge fmt
+forge build
+forge test
+```
+
+Opcional:
+
+```bash
+alias prepush='forge fmt && forge build && forge test'
+```
+
+---
+
+# Roadmap
+
+- Integración completa frontend ↔ contratos
+- Dashboard de dividendos
+- Gestión avanzada de proyectos
+- Deploy productivo
+- Auditoría externa
+- Soporte multi-chain
+
+---
+
+# Licencia
+
+MIT
+
