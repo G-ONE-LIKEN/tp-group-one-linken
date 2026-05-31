@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 // contracts/src/ProjectRegistry.sol
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -12,15 +11,11 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * @notice Registra proyectos energeticos con su etapa y precio de conversión LKN/USDC.
  *
  * Etapas:
- *   FUNDING → precio early bird (más LKN por USDC)
- *   ACTIVE  → precio estándar
- *   PAUSED  → no acepta nuevas inversiones
- *
- * Precios expresados en USDC por LKN con 6 decimales.
- * Ejemplo: 1 LKN = 0.10 USDC → earlyBirdPrice = 100000 (0.10 * 1e6)
- *          1 LKN = 0.25 USDC → standardPrice  = 250000 (0.25 * 1e6)
+ *   FUNDING → precio early bird (más LKN por USDC).
+ *   ACTIVE  → precio estándar.
+ *   PAUSED  → no acepta nuevas inversiones.
  */
-contract ProjectRegistry is AccessControl, Pausable, ReentrancyGuard {
+contract ProjectRegistry is AccessControl, ReentrancyGuard {
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
     bytes32 public constant OFFERING_ROLE = keccak256("OFFERING_ROLE");
 
@@ -62,7 +57,7 @@ contract ProjectRegistry is AccessControl, Pausable, ReentrancyGuard {
         address owner,
         uint256 earlyBirdPrice,
         uint256 standardPrice
-    ) external onlyRole(CREATOR_ROLE) nonReentrant whenNotPaused returns (uint256 projectId) {
+    ) external onlyRole(CREATOR_ROLE) nonReentrant returns (uint256 projectId) {
         require(bytes(name).length > 0, "PR: empty name");
         require(owner != address(0), "PR: zero owner");
         require(earlyBirdPrice > 0, "PR: zero early bird price");
@@ -104,16 +99,6 @@ contract ProjectRegistry is AccessControl, Pausable, ReentrancyGuard {
         require(p.stage == Stage.FUNDING, "PR: not in funding");
         p.stage = Stage.ACTIVE;
         emit StageChanged(projectId, Stage.ACTIVE);
-    }
-
-    // ── Circuit-breaker ──────────────────────────────────────
-
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
     }
 
     // ── Views ────────────────────────────────────────────────

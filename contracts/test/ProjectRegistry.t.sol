@@ -158,25 +158,4 @@ contract ProjectRegistryTest is Test {
         vm.expectRevert("PR: not found");
         registry.setStage(999, ProjectRegistry.Stage.ACTIVE);
     }
-
-    function test_AdminCanPauseAndUnpause() public {
-        vm.startPrank(platform);
-
-        registry.pause();
-        registry.unpause();
-
-        vm.stopPrank();
-    }
-
-    function test_PausedBlocksRegisterProject() public {
-        vm.startPrank(platform);
-        registry.pause();
-        vm.stopPrank();
-
-        vm.prank(creator);
-
-        vm.expectRevert();
-
-        registry.registerProject("Solar", "Desc", creator, EARLY, STD);
-    }
 }

@@ -114,46 +114,6 @@ contract LinkenTokenTest is Test {
         token.burnFrom(alice, 100 * 1e18);
     }
 
-    // ── Pausable ─────────────────────────────────────────────
-
-    function test_PauseBlocksTransfers() public {
-        vm.prank(platform);
-        token.pause();
-
-        vm.prank(emisor);
-        vm.expectRevert();
-        token.transfer(alice, 100 * 1e18);
-    }
-
-    function test_PauseBlocksBurn() public {
-        vm.prank(emisor);
-        token.transfer(alice, 1_000 * 1e18);
-
-        vm.prank(platform);
-        token.pause();
-
-        vm.prank(alice);
-        vm.expectRevert();
-        token.burn(100 * 1e18);
-    }
-
-    function test_UnpauseRestoresTransfers() public {
-        vm.startPrank(platform);
-        token.pause();
-        token.unpause();
-        vm.stopPrank();
-
-        vm.prank(emisor);
-        token.transfer(alice, 100 * 1e18);
-        assertEq(token.balanceOf(alice), 100 * 1e18);
-    }
-
-    function test_NonPauserCannotPause() public {
-        vm.prank(alice);
-        vm.expectRevert();
-        token.pause();
-    }
-
     // ── Distributor ───────────────────────────────────────────
 
     function test_SetDistributor() public {

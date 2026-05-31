@@ -6,15 +6,13 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LinkenToken} from "./LinkenToken.sol";
 import "./interfaces/IDividendDistributor.sol";
 
 /**
  * @title DividendDistributor
- * @notice Recibe ingresos en USDC y los distribuye proporcionalmente
- *         entre los holders de un LinkenToken.
+ * @notice Recibe ingresos en USDC y los distribuye proporcionalmente entre los holders de un LinkenToken.
  *
  * Algoritmo "dividends per share":
  *   magnifiedDPShare += (amount * MAGNITUDE) / totalSupply
@@ -23,7 +21,7 @@ import "./interfaces/IDividendDistributor.sol";
  * Patron pull: cada holder retira sus dividendos cuando quiere.
  * La plataforma nunca itera sobre holders (no hay loops).
  */
-contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDividendDistributor {
+contract DividendDistributor is AccessControl, ReentrancyGuard, IDividendDistributor {
     using SafeERC20 for IERC20;
 
     bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
@@ -74,7 +72,7 @@ contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDivid
      * @dev CEI: checks → effects → interaction (safeTransferFrom al final).
      *      Requiere approve previo del depositor hacia este contrato.
      */
-    function depositDividends(uint256 amount) external onlyRole(DEPOSITOR_ROLE) nonReentrant whenNotPaused {
+    function depositDividends(uint256 amount) external onlyRole(DEPOSITOR_ROLE) nonReentrant {
         // Checks
         require(amount > 0, "DD: amount = 0");
         uint256 supply = token.totalSupply();
@@ -86,7 +84,6 @@ contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDivid
 
         // Interaction
         usdc.safeTransferFrom(msg.sender, address(this), amount);
-
         emit DividendsDeposited(msg.sender, amount);
     }
 
@@ -96,7 +93,7 @@ contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDivid
      * @notice El holder retira todos sus dividendos pendientes.
      * @dev CEI: calcula pendiente → actualiza estado → transfiere.
      */
-    function claimDividends() external nonReentrant whenNotPaused {
+    function claimDividends() external nonReentrant {
         uint256 pending = _pendingDividends(msg.sender);
         require(pending > 0, "DD: nothing to claim");
 
@@ -106,7 +103,6 @@ contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDivid
 
         // Interaction
         usdc.safeTransfer(msg.sender, pending);
-
         emit DividendsWithdrawn(msg.sender, pending);
     }
 
@@ -133,15 +129,6 @@ contract DividendDistributor is AccessControl, Pausable, ReentrancyGuard, IDivid
 
     function totalDividendsEarned(address holder) external view returns (uint256) {
         return _cumulativeDividends(holder);
-    }
-
-    // ── Circuit-breaker ──────────────────────────────────────
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
     }
 
     // ── Internals ────────────────────────────────────────────

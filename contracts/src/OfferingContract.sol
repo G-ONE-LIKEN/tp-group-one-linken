@@ -18,11 +18,10 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ProjectRegistry} from "./ProjectRegistry.sol";
 
-contract OfferingContract is AccessControl, Pausable, ReentrancyGuard {
+contract OfferingContract is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ── Roles ─────────────────────────────────────────────────
@@ -117,11 +116,11 @@ contract OfferingContract is AccessControl, Pausable, ReentrancyGuard {
         require(_deadline > block.timestamp, "OC: deadline in past");
         require(_registry != address(0), "OC: zero registry");
 
-        registry = ProjectRegistry(_registry);
-        projectId = _projectId;
         lkn = IERC20(_lkn);
         usdc = IERC20(_usdc);
         treasury = _treasury;
+        registry = ProjectRegistry(_registry);
+        projectId = _projectId;
         tokenPrice = _tokenPrice;
         softCap = _softCap;
         hardCap = _hardCap;
@@ -169,7 +168,7 @@ contract OfferingContract is AccessControl, Pausable, ReentrancyGuard {
      *      Requiere approve previo de USDC a este contrato.
      * @param usdcAmount USDC a pagar (6 decimales).
      */
-    function buy(uint256 usdcAmount) external nonReentrant whenNotPaused {
+    function buy(uint256 usdcAmount) external nonReentrant {
         // Checks
         require(state == RoundState.OPEN, "OC: round not open");
         require(block.timestamp <= deadline, "OC: deadline passed");
@@ -248,16 +247,6 @@ contract OfferingContract is AccessControl, Pausable, ReentrancyGuard {
         usdc.safeTransferFrom(treasury, msg.sender, amount);
 
         emit Refunded(msg.sender, amount);
-    }
-
-    // ── Circuit-breaker ───────────────────────────────────────
-
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
     }
 
     // ── Views ─────────────────────────────────────────────────

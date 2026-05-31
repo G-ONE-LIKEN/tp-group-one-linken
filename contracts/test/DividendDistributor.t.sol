@@ -44,12 +44,13 @@ contract DividendDistributorTest is Test {
         usdc = new MockUSDC();
 
         // 3. Desplegar el distribuidor pasando los parámetros correctos
+        vm.prank(platform);
         distributor = new DividendDistributor(address(token), address(usdc), platform);
 
-        // 4. Darle el rol de DEPOSITOR a la plataforma para que pueda meter dividendos en los tests
+        // 4. Asignar USDC para los tests de deposit
+        usdc.mint(platform, 10_000 * 1e6);
         vm.prank(platform);
-        // El contrato de test es el admin por haber hecho el "new", así que le da el rol a platform directamente:
-        distributor.grantRole(distributor.DEPOSITOR_ROLE(), platform);
+        usdc.approve(address(distributor), type(uint256).max);
     }
 
     // ── Deposit ──────────────────────────────────────────────
@@ -69,7 +70,7 @@ contract DividendDistributorTest is Test {
 
     function test_DepositZeroReverts() public {
         vm.prank(platform);
-        vm.expectRevert("DD: zero amount");
+        vm.expectRevert("DD: amount = 0");
         distributor.depositDividends(0);
     }
 
@@ -162,29 +163,6 @@ contract DividendDistributorTest is Test {
         assertApproxEqAbs(distributor.pendingDividends(bob), 250 * 1e6, 10);
     }
 
-    // ── Pausable ─────────────────────────────────────────────
-
-    function test_PausedBlocksClaim() public {
-        vm.startPrank(platform);
-        token.transfer(alice, SUPPLY);
-        distributor.depositDividends(1_000 * 1e6);
-        distributor.pause();
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert();
-        distributor.claimDividends();
-    }
-
-    function test_PausedBlocksDeposit() public {
-        vm.startPrank(platform);
-        token.transfer(alice, SUPPLY);
-        distributor.pause();
-        vm.expectRevert();
-        distributor.depositDividends(1_000 * 1e6);
-        vm.stopPrank();
-    }
-
     // ── Fuzz ─────────────────────────────────────────────────
 
     function testFuzz_ProportionalPayout(uint256 aliceShare) public {
@@ -258,24 +236,6 @@ contract DividendDistributorTest is Test {
         // Intento de llamada externa maliciosa
         vm.expectRevert("DD: not linken token");
         distributor.onTokenTransfer(alice, bob, 100e18);
-    }
-
-    function test_UnpauseRestoresClaim() public {
-        vm.startPrank(platform);
-
-        token.transfer(alice, SUPPLY);
-        distributor.depositDividends(1000 * 1e6);
-
-        distributor.pause();
-        distributor.unpause();
-
-        vm.stopPrank();
-
-        vm.prank(alice);
-
-        distributor.claimDividends();
-
-        assertGt(usdc.balanceOf(alice), 0);
     }
 
     function test_TotalWithdrawnUpdated() public {

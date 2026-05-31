@@ -14,21 +14,19 @@ pragma solidity ^0.8.24;
  * Decisiones de diseño:
  * - OpenZeppelin v5: última versión estable, compatibilidad nativa con 0.8.24.
  * - ReentrancyGuard: protege burn contra ataques de reentrada.
- * - Pausable: circuit-breaker de emergencia para detener transferencias.
- * - AccessControl: roles separados para pause y administración.
+ * - Sin Pausable: pausar transferencias destruye la confianza del inversor (ver ADR-0015).
+ * - AccessControl: roles separados para administración.
  * - Patrón CEI: validaciones → efectos → interacciones externas.
  * - Sin loops ni envío de ETH.
- * - Sin unchecked salvo donde se justifica explícitamente.
  */
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IDividendDistributor} from "./interfaces/IDividendDistributor.sol";
 
-contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ReentrancyGuard {
+contract LinkenToken is ERC20, ERC20Burnable, AccessControl, ReentrancyGuard {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     /// @notice Supply total fijo — emitido en el TGE, nunca aumenta.
@@ -46,7 +44,6 @@ contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reen
      * @param platformAdmin  Recibe DEFAULT_ADMIN_ROLE y PAUSER_ROLE (plataforma).
      * @param tgeRecipient   Recibe el supply completo en el TGE (SPE / emisor).
      * @param tgeSupply      Cantidad de tokens a emitir. Fijo para siempre.
-     *                       Ejemplo parque 5MW: 200_000 * 1e18
      */
     constructor(address platformAdmin, address tgeRecipient, uint256 tgeSupply) ERC20("Linken", "LKN") {
         require(platformAdmin != address(0), "LKN: zero admin");
@@ -56,7 +53,6 @@ contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reen
         initialSupply = tgeSupply;
 
         _grantRole(DEFAULT_ADMIN_ROLE, platformAdmin);
-        _grantRole(PAUSER_ROLE, platformAdmin);
 
         // TGE — emisión única al SPE dueño del parque
         _mint(tgeRecipient, tgeSupply);
@@ -68,7 +64,7 @@ contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reen
      * @notice Quema `amount` tokens propios.
      * @dev Sink de la economía del token — reduce supply circulante.
      */
-    function burn(uint256 amount) public override nonReentrant whenNotPaused {
+    function burn(uint256 amount) public override nonReentrant {
         require(amount > 0, "LKN: amount must be > 0");
         super.burn(amount);
         emit Burned(msg.sender, amount);
@@ -77,20 +73,10 @@ contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reen
     /**
      * @notice Quema `amount` tokens de `account` con allowance.
      */
-    function burnFrom(address account, uint256 amount) public override nonReentrant whenNotPaused {
+    function burnFrom(address account, uint256 amount) public override nonReentrant {
         require(amount > 0, "LKN: amount must be > 0");
         super.burnFrom(account, amount);
         emit Burned(account, amount);
-    }
-
-    // ── Circuit-breaker ───────────────────────────────────────
-
-    function pause() external onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(PAUSER_ROLE) {
-        _unpause();
     }
 
     // ── Distributor ───────────────────────────────────────────
@@ -103,10 +89,9 @@ contract LinkenToken is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reen
 
     // ── Override requerido por herencia múltiple ──────────────
 
-    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) {
+    function _update(address from, address to, uint256 value) internal virtual override(ERC20) {
         super._update(from, to, value);
-        // Notificar al distributor en transferencias entre holders
-        // (no en mint: from == 0, ni en burn: to == 0)
+
         if (from != address(0) && to != address(0)) {
             if (address(dividendDistributor) != address(0)) {
                 dividendDistributor.onTokenTransfer(from, to, value);

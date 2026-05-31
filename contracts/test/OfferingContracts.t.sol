@@ -232,18 +232,8 @@ contract OfferingContractTest is Test {
         offering.buy(10 * 1e6);
     }
 
-    function test_BuyWhenPausedReverts() public {
-        vm.prank(platform);
-        offering.pause();
-
-        vm.prank(alice);
-        vm.expectRevert();
-        offering.buy(10 * 1e6);
-    }
-
     function test_HardCapClosesRoundAutomatically() public {
-        // Alice compra exactamente el hard cap
-        usdc.mint(alice, HARD_CAP);
+        usdc.mint(alice, HARD_CAP); // Alice compra exactamente el hard cap
         vm.prank(alice);
         offering.buy(HARD_CAP);
 
