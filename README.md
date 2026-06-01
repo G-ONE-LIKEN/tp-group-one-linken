@@ -482,3 +482,168 @@ Las decisiones de diseño están documentadas en [`docs/`](./docs/).
 ## Licencia
 
 MIT
+
+# Grafico Web2 + Web3
+
+```bash
+=== COMPONENTES ===
+
+[UI: Frontend (Next.js)]
+[EXT: MetaMask]
+[BC: LinkenToken]
+[BC: ProjectRegistry]
+[BC: OfferingContract]
+[BC: DividendDistributor]
+[BC: USDC (Circle)]
+
+=== FLUJO 1: Registro de proyecto (Admin) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: ProjectRegistry]
+[BC: ProjectRegistry] ----(3)----> [UI: Frontend]
+
+1) [off-chain] Admin completa formulario: nombre, descripción, earlyBirdPrice, standardPrice, owner
+2) [on-chain]  call: registerProject(name, description, owner, earlyBirdPrice, standardPrice)
+3) [event]     emit ProjectRegistered(projectId, owner, name, earlyBirdPrice, standardPrice)
+
+=== FLUJO 2: Setup de ronda (Emisor) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: OfferingContract]
+[UI: Frontend] ----(3)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(4)----> [BC: LinkenToken]
+[UI: Frontend] ----(5)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(6)----> [BC: OfferingContract]
+[UI: Frontend] ----(7)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(8)----> [BC: ProjectRegistry]
+[UI: Frontend] ----(9)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(10)----> [BC: OfferingContract]
+
+1)  [off-chain] Admin deploya OfferingContract con: lkn, usdc, treasury, tokenPrice, softCap, hardCap, deadline, registry, projectId
+2)  [on-chain]  constructor(...)
+3)  [off-chain] Admin aprueba LKN al OfferingContract
+4)  [on-chain]  call: approve(offeringContract, amount)
+5)  [off-chain] Emisor deposita LKN en escrow
+6)  [on-chain]  call: deposit(lknAmount)
+7)  [off-chain] Admin otorga OFFERING_ROLE al OfferingContract en el Registry
+8)  [on-chain]  call: grantRole(OFFERING_ROLE, offeringContract)
+9)  [off-chain] Emisor abre la ronda
+10) [on-chain]  call: openRound()
+
+=== FLUJO 3: Compra de LKN (Inversor — etapa FUNDING) ===
+
+[UI: Frontend] ----(1)----> [BC: ProjectRegistry]
+<----(2)---- [BC: ProjectRegistry]
+[UI: Frontend] ----(3)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(4)----> [BC: USDC]
+[UI: Frontend] ----(5)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(6)----> [BC: OfferingContract]
+[BC: OfferingContract] ----(7)----> [BC: USDC]
+[BC: OfferingContract] ----(8)----> [BC: LinkenToken]
+[BC: OfferingContract] ----(9)----> [UI: Frontend]
+
+1)  [off-chain] Frontend consulta precio del proyecto
+2)  [on-chain]  view: currentPrice(projectId) → earlyBirdPrice
+3)  [off-chain] Inversor aprueba USDC al OfferingContract
+4)  [on-chain]  call: approve(offeringContract, usdcAmount)
+5)  [off-chain] Inversor compra LKN
+6)  [on-chain]  call: buy(usdcAmount)
+7)  [on-chain]  call: safeTransferFrom(investor, treasury, usdcAmount)
+8)  [on-chain]  call: safeTransfer(investor, lknAmount)  [lknAmount = usdcAmount * 1e18 / tokenPrice]
+9)  [event]     emit TokensPurchased(buyer, usdcAmount, lknAmount)
+
+=== FLUJO 4: Cierre exitoso por hard cap (automático) ===
+
+[BC: OfferingContract] ----(1)----> [BC: ProjectRegistry]
+[BC: OfferingContract] ----(2)----> [UI: Frontend]
+[BC: ProjectRegistry]  ----(3)----> [UI: Frontend]
+
+1)  [on-chain]  call: activateProject(projectId)  [dentro de buy() al alcanzar hardCap]
+2)  [event]     emit RoundFinalized(totalRaised, lknSold)
+3)  [event]     emit StageChanged(projectId, ACTIVE)
+
+=== FLUJO 5: Cierre exitoso por finalize (emisor supera softCap) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: OfferingContract]
+[BC: OfferingContract] ----(3)----> [BC: LinkenToken]
+[BC: OfferingContract] ----(4)----> [BC: ProjectRegistry]
+[BC: OfferingContract] ----(5)----> [UI: Frontend]
+[BC: ProjectRegistry]  ----(5)----> [UI: Frontend]
+
+1)  [off-chain] Emisor llama finalize() — puede hacerlo cuando totalRaised >= softCap
+2)  [on-chain]  call: finalize()
+3)  [on-chain]  call: safeTransfer(emisor, unsoldLKN)
+4)  [on-chain]  call: activateProject(projectId) → stage = ACTIVE  [automático dentro de finalize()]
+5)  [event]     emit RoundFinalized(totalRaised, lknSold)
+                emit StageChanged(projectId, ACTIVE)
+                emit UnsoldLKNReturned(emisor, amount)  [si hay LKN no vendidos]
+
+=== FLUJO 6: Consulta post-apertura (Inversor dormido) ===
+
+[UI: Frontend] ----(1)----> [BC: ProjectRegistry]
+<----(2)---- [BC: ProjectRegistry]
+
+1)  [off-chain] Inversor vuelve meses después y consulta el proyecto
+2)  [on-chain]  view: currentPrice(projectId) → standardPrice  [stage = ACTIVE]
+
+=== FLUJO 7: Ronda fallida — refund (Inversor) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: OfferingContract]
+[BC: OfferingContract] ----(3)----> [BC: USDC]
+[BC: OfferingContract] ----(4)----> [UI: Frontend]
+
+1)  [off-chain] Deadline pasó sin alcanzar softCap — inversor llama refund
+2)  [on-chain]  call: refund()
+3)  [on-chain]  call: safeTransferFrom(treasury, investor, usdcAmount)  [treasury devuelve USDC]
+4)  [event]     emit Refunded(investor, usdcAmount)
+
+=== FLUJO 8: Distribución de dividendos (Plataforma) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: USDC]
+[UI: Frontend] ----(3)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(4)----> [BC: DividendDistributor]
+[BC: DividendDistributor] ----(5)----> [BC: USDC]
+[BC: DividendDistributor] ----(6)----> [UI: Frontend]
+
+1)  [off-chain] Plataforma aprueba USDC al DividendDistributor
+2)  [on-chain]  call: approve(distributorAddress, amount)
+3)  [off-chain] Plataforma deposita dividendos del período
+4)  [on-chain]  call: depositDividends(usdcAmount)
+5)  [on-chain]  call: safeTransferFrom(platform, distributor, usdcAmount)
+6)  [event]     emit DividendsDeposited(depositor, amount)
+                [magnifiedDividendPerShare += amount * 2^128 / totalSupply]
+
+=== FLUJO 9: Retiro de dividendos (Inversor) ===
+
+[UI: Frontend] ----(1)----> [BC: DividendDistributor]
+<----(2)---- [BC: DividendDistributor]
+[UI: Frontend] ----(3)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(4)----> [BC: DividendDistributor]
+[BC: DividendDistributor] ----(5)----> [BC: USDC]
+[BC: DividendDistributor] ----(6)----> [UI: Frontend]
+
+1)  [off-chain] Frontend consulta dividendos pendientes del inversor
+2)  [on-chain]  view: pendingDividends(holderAddress) → pendingUSDC
+3)  [off-chain] Inversor decide retirar
+4)  [on-chain]  call: claimDividends()
+5)  [on-chain]  call: safeTransfer(investor, pendingUSDC)
+6)  [event]     emit DividendsWithdrawn(holder, amount)
+
+=== FLUJO 10: Transferencia de LKN entre inversores (hook de dividendos) ===
+
+[UI: Frontend] ----(1)----> [EXT: MetaMask]
+[EXT: MetaMask] ----(2)----> [BC: LinkenToken]
+[BC: LinkenToken] ----(3)----> [BC: DividendDistributor]
+[BC: LinkenToken] ----(4)----> [UI: Frontend]
+
+1)  [off-chain] Inversor A transfiere LKN a Inversor B
+2)  [on-chain]  call: transfer(investorB, amount)
+3)  [on-chain]  call: onTokenTransfer(from, to, amount)
+                [magnifiedDividendCorrections[from] += delta]
+                [magnifiedDividendCorrections[to]   -= delta]
+                [preserva derechos adquiridos antes de la transferencia]
+4)  [event]     emit Transfer(from, to, amount)  [estándar ERC-20]
+```
