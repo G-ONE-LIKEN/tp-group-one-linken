@@ -647,3 +647,33 @@ MIT
                 [preserva derechos adquiridos antes de la transferencia]
 4)  [event]     emit Transfer(from, to, amount)  [estándar ERC-20]
 ```
+
+# Estrategias para prevenir monopolio
+
+## KYC + límites por identidad (Web2)
+
+Estándar en plataformas reguladas (Securitize, Tokeny, Republic). Un backend verifica identidad (DNI/pasaporte) y asigna un cupo máximo de inversión por persona real, no por wallet. Una persona puede tener mil wallets pero una sola identidad verificada.
+
+## Whitelist con cupos (Web2 + Web3 híbrido)
+
+El admin aprueba wallets y opcionalmente les asigna un límite individual. Esto se implementa en el contrato como un mapping(address => uint256) public maxAllocation que el admin configura off-chain después del KYC. Es el modelo de Reg D / Reg S en securities tokenizadas de EE.UU.
+
+## Rondas con tiempo mínimo entre compras (Web3)
+
+Cada wallet puede comprar máximo X USDC cada Y horas. Dificulta la acumulación rápida sin eliminar la posibilidad de invertir mucho a lo largo del tiempo.
+
+## Precio dinámico por volumen (Web3 — bonding curve)
+
+Cuanto más compra un inversor en una sola ronda, más caro le sale cada token. Desincentiva la acumulación masiva naturalmente. Uniswap y Balancer usan variantes de esto.
+
+## Oversubscription + prorrateo (Web2)
+
+Si la demanda supera el hard cap, se acepta todo y al cierre se prorratean los tokens proporcionalmente. Nadie puede "acaparar" porque todos reciben menos si hay mucha demanda. Es el modelo de las IPOs tradicionales y de plataformas como CoinList.
+
+
+# La recomendacion: híbrido KYC + whitelist:
+
+1. **Off-chain**: la plataforma verifica identidad y aprueba la wallet
+2. **On-chain**: el `OfferingContract` tiene un `mapping(address => bool) public whitelisted` y solo wallets aprobadas pueden llamar `buy()`.
+
+**Opcional**: `mapping(address => uint256) public maxAllocation` para límites individualizados
