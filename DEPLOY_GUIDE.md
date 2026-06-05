@@ -48,30 +48,17 @@ forge 0.2.0 (abc1234 2025-xx-xx)
 
 Necesitás una URL de RPC para conectarte a la red Sepolia. Es gratis.
 
-### Opción A — Alchemy (recomendado)
+### Opción A — RPC público (sin registro, gratis)
 
-1. Entrá a [alchemy.com](https://alchemy.com) y creá una cuenta
-2. Dashboard → **Create new app**
-3. Chain: **Ethereum** | Network: **Ethereum Sepolia**
-4. Copiá la **HTTPS URL** — va a ser algo así:
-   ```
-   https://eth-sepolia.g.alchemy.com/v2/TU_API_KEY
-   ```
-
-### Opción B — Infura
-
-1. Entrá a [infura.io](https://infura.io) y creá una cuenta
-2. Dashboard → **Create new API key** → **Web3 API**
-3. Copiá la URL de Sepolia:
-   ```
-   https://sepolia.infura.io/v3/TU_PROJECT_ID
-   ```
-
-### Opción C — RPC público (sin registro, menos estable)
+No necesitás crear ninguna cuenta. Usá directamente:
 
 ```
 https://ethereum-sepolia-rpc.publicnode.com
 ```
+
+### Opción B — Alchemy o Infura (solo si el público falla)
+
+Si el RPC público se cae o es lento, podés crear una cuenta gratis en [alchemy.com](https://alchemy.com) o [infura.io](https://infura.io) y obtener una URL propia.
 
 ---
 
